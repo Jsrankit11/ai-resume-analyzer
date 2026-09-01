@@ -1,0 +1,167 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-[#fcfbfa] text-slate-800 min-h-screen antialiased overflow-x-hidden transition-colors duration-200;
+  }
+
+  /* ================= THEME MODES ================= */
+  html[data-theme='dark'] body {
+    @apply bg-[#0b0f19] text-slate-100;
+  }
+  html[data-theme='dark'] .bg-white {
+    @apply bg-[#111827] text-slate-100 border-slate-800 !important;
+  }
+  html[data-theme='dark'] .bg-slate-50 {
+    @apply bg-[#1f2937] text-slate-200 border-slate-800 !important;
+  }
+  html[data-theme='dark'] .bg-slate-100 {
+    @apply bg-[#374151] text-slate-200 border-slate-700 !important;
+  }
+  html[data-theme='dark'] .text-slate-900 {
+    @apply text-white !important;
+  }
+  html[data-theme='dark'] .text-slate-800 {
+    @apply text-slate-200 !important;
+  }
+  html[data-theme='dark'] .text-slate-700 {
+    @apply text-slate-300 !important;
+  }
+  html[data-theme='dark'] .text-slate-600 {
+    @apply text-slate-400 !important;
+  }
+  html[data-theme='dark'] .border-slate-200, html[data-theme='dark'] .border-slate-100 {
+    @apply border-slate-800 !important;
+  }
+  html[data-theme='dark'] .kick-nav {
+    background: rgba(11, 15, 25, 0.95);
+    border-bottom: 1px solid #1f2937;
+  }
+
+  /* Midnight Navy */
+  html[data-theme='midnight'] body {
+    @apply bg-[#030712] text-slate-100;
+  }
+  html[data-theme='midnight'] .bg-white {
+    @apply bg-[#0f172a] text-slate-100 border-slate-800 !important;
+  }
+  html[data-theme='midnight'] .bg-slate-50 {
+    @apply bg-[#1e293b] text-slate-200 border-slate-800 !important;
+  }
+
+  /* Warm Sepia */
+  html[data-theme='warm'] body {
+    @apply bg-[#faf6f0] text-stone-900;
+  }
+  html[data-theme='warm'] .bg-white {
+    @apply bg-[#fffdfa] border-stone-200 !important;
+  }
+
+  /* Emerald Pro */
+  html[data-theme='emerald'] body {
+    @apply bg-[#f0fdf4] text-slate-900;
+  }
+
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  .font-editorial {
+    font-family: 'Lora', Georgia, serif;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Kickresume Clean Cards */
+.kick-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.05);
+}
+
+.kick-card-hover {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kick-card-hover:hover {
+  border-color: #fecdd3;
+  box-shadow: 0 12px 30px -8px rgba(255, 86, 86, 0.12);
+  transform: translateY(-2px);
+}
+
+.kick-nav {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid #eef2f6;
+}
+
+/* Resume Sheet Visual */
+.resume-sheet {
+  background: #ffffff;
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+}
+
+/* Hide scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Print Stylesheet for A4 Vector PDF Print */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-resume, #printable-resume * {
+    visibility: visible;
+  }
+  #printable-resume {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+  }
+  header, footer, nav, button, .no-print {
+    display: none !important;
+  }
+}
