@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Wand2, 
@@ -20,11 +20,14 @@ import {
   FolderGit2,
   Sliders,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Camera,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 import { generateResumeFromPrompt } from '../services/api';
 import { useResume } from '../context/ResumeContext';
-import ResumeTemplateView from '../components/ResumeTemplateView';
+import ResumeTemplateView, { PRESET_AVATARS } from '../components/ResumeTemplateView';
 
 const SAMPLE_PROMPTS = [
   {
@@ -53,6 +56,8 @@ const SAMPLE_PROMPTS = [
 export default function Builder() {
   const { currentAnalysis, setCurrentAnalysis } = useResume();
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+  const editFileInputRef = useRef(null);
 
   // Mode: 'prompt' | 'edit' | 'preview'
   const [activeTab, setActiveTab] = useState('prompt');
@@ -70,6 +75,7 @@ export default function Builder() {
     location: 'Bangalore, India',
     linkedin: 'linkedin.com/in/ankitsharma',
     github: 'github.com/ankitdev',
+    photo: PRESET_AVATARS[0].url,
     keySkills: 'React.js, Node.js, Express.js, MongoDB, JavaScript ES6+, TypeScript, Tailwind CSS, REST APIs, Git'
   });
 
@@ -89,6 +95,30 @@ export default function Builder() {
     }));
   };
 
+  const handlePromptPhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === 'string') {
+        setFormData((prev) => ({ ...prev, photo: event.target.result }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditPhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === 'string') {
+        handleUpdateCandidate('photo', event.target.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleGenerate = async () => {
     try {
       setLoading(true);
@@ -104,6 +134,11 @@ export default function Builder() {
         keySkills: skillsArray
       });
 
+      // Preserve uploaded photo in candidate data
+      if (formData.photo && generated?.candidate) {
+        generated.candidate.photo = formData.photo;
+      }
+
       setEditableResume(generated);
       setCurrentAnalysis(generated);
       setActiveTab('edit');
@@ -117,14 +152,22 @@ export default function Builder() {
 
   // Editable Resume Handlers
   const handleUpdateCandidate = (field, value) => {
-    setEditableResume((prev) => ({
-      ...prev,
-      candidate: { ...prev?.candidate, [field]: value }
-    }));
+    setEditableResume((prev) => {
+      const updated = {
+        ...prev,
+        candidate: { ...prev?.candidate, [field]: value }
+      };
+      setCurrentAnalysis(updated);
+      return updated;
+    });
   };
 
   const handleUpdateSummary = (value) => {
-    setEditableResume((prev) => ({ ...prev, summary: value }));
+    setEditableResume((prev) => {
+      const updated = { ...prev, summary: value };
+      setCurrentAnalysis(updated);
+      return updated;
+    });
   };
 
   const handleAddSkill = (skillText) => {
@@ -132,31 +175,71 @@ export default function Builder() {
     setEditableResume((prev) => {
       const curTech = prev?.skills?.technical || [];
       if (curTech.includes(skillText.trim())) return prev;
-      return {
+      const updated = {
         ...prev,
         skills: {
           ...prev?.skills,
           technical: [...curTech, skillText.trim()]
         }
       };
+      setCurrentAnalysis(updated);
+      return updated;
     });
   };
 
   const handleRemoveSkill = (skillText) => {
-    setEditableResume((prev) => ({
-      ...prev,
-      skills: {
-        ...prev?.skills,
-        technical: (prev?.skills?.technical || []).filter((s) => s !== skillText)
-      }
-    }));
+    setEditableResume((prev) => {
+      const updated = {
+        ...prev,
+        skills: {
+          ...prev?.skills,
+          technical: (prev?.skills?.technical || []).filter((s) => s !== skillText)
+        }
+      };
+      setCurrentAnalysis(updated);
+      return updated;
+    });
   };
 
   const handleUpdateExperience = (idx, field, value) => {
     setEditableResume((prev) => {
       const exps = [...(prev?.experience || [])];
       exps[idx] = { ...exps[idx], [field]: value };
-      return { ...prev, experience: exps };
+      const updated = { ...prev, experience: exps };
+      setCurrentAnalysis(updated);
+      return updated;
+    });
+  };
+
+  const handleAddExperience = () => {
+    setEditableResume((prev) => {
+      const newExp = {
+        role: 'Software Engineer',
+        company: 'Company / Project',
+        duration: '2023 - Present',
+        location: 'Remote',
+        responsibilities: [
+          'Developed robust responsive user interfaces with high performance.',
+          'Optimized database operations and API response times by 30%.'
+        ]
+      };
+      const updated = {
+        ...prev,
+        experience: [...(prev?.experience || []), newExp]
+      };
+      setCurrentAnalysis(updated);
+      return updated;
+    });
+  };
+
+  const handleRemoveExperience = (idx) => {
+    setEditableResume((prev) => {
+      const updated = {
+        ...prev,
+        experience: (prev?.experience || []).filter((_, i) => i !== idx)
+      };
+      setCurrentAnalysis(updated);
+      return updated;
     });
   };
 
@@ -164,7 +247,36 @@ export default function Builder() {
     setEditableResume((prev) => {
       const projs = [...(prev?.projects || [])];
       projs[idx] = { ...projs[idx], [field]: value };
-      return { ...prev, projects: projs };
+      const updated = { ...prev, projects: projs };
+      setCurrentAnalysis(updated);
+      return updated;
+    });
+  };
+
+  const handleAddProject = () => {
+    setEditableResume((prev) => {
+      const newProj = {
+        title: 'New AI/Web Application',
+        description: 'Built a full stack application with authentication, real-time updates and seamless UX.',
+        techStack: ['React', 'Node.js', 'Tailwind CSS']
+      };
+      const updated = {
+        ...prev,
+        projects: [...(prev?.projects || []), newProj]
+      };
+      setCurrentAnalysis(updated);
+      return updated;
+    });
+  };
+
+  const handleRemoveProject = (idx) => {
+    setEditableResume((prev) => {
+      const updated = {
+        ...prev,
+        projects: (prev?.projects || []).filter((_, i) => i !== idx)
+      };
+      setCurrentAnalysis(updated);
+      return updated;
     });
   };
 
@@ -181,13 +293,13 @@ export default function Builder() {
       <div className="text-center space-y-3">
         <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold bg-coral-50 text-[#ff5656] border border-coral-200">
           <Wand2 className="w-3.5 h-3.5" />
-          <span>AI Resume Builder & Prompt Generator</span>
+          <span>AI Resume Builder • Photo Customizer • 8+ Pro Templates</span>
         </div>
         <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 font-heading">
-          AI Resume Generator & Live Editor
+          AI Resume Generator & Custom Studio
         </h1>
         <p className="text-sm sm:text-base text-slate-600 max-w-xl mx-auto leading-relaxed">
-          Generate an ATS-optimized professional resume from a single prompt, customize all details with real-time editing, and export directly to PDF.
+          Generate an ATS-optimized professional resume from a prompt, upload your headshot photo, customize in real-time, and download across 8 modern templates.
         </p>
       </div>
 
@@ -232,7 +344,7 @@ export default function Builder() {
           }`}
         >
           <Eye className="w-4 h-4" />
-          3. Templates & PDF
+          3. 8+ Templates & PDF
         </button>
       </div>
 
@@ -244,46 +356,97 @@ export default function Builder() {
               Generate Resume with AI Prompt
             </h2>
             <p className="text-xs sm:text-sm text-slate-500">
-              Enter your bio, target role, and key skills or pick a preset prompt below.
+              Enter your bio, target role, upload your headshot, and key skills or pick a preset prompt below.
             </p>
           </div>
 
-          {/* Sample Prompts */}
+          {/* Quick Preset Samples */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-900 uppercase tracking-wider block font-heading">
-              Quick Presets:
-            </label>
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block font-heading">
+              Choose a Sample Role Prompt:
+            </span>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {SAMPLE_PROMPTS.map((sample, idx) => (
                 <button
                   key={idx}
-                  type="button"
                   onClick={() => handleApplySamplePrompt(sample)}
-                  className="p-3.5 rounded-2xl text-left border border-slate-200 hover:border-[#ff5656] bg-slate-50 hover:bg-coral-50/50 transition-all space-y-1"
+                  className="p-3.5 rounded-2xl border border-slate-200 hover:border-[#ff5656] hover:bg-coral-50/50 text-left transition-all space-y-1"
                 >
-                  <p className="text-xs font-bold text-slate-900 font-heading">
+                  <span className="text-xs font-bold text-slate-900 block">
                     {sample.title}
-                  </p>
-                  <p className="text-[11px] text-slate-500 line-clamp-2">
+                  </span>
+                  <span className="text-[11px] text-slate-500 line-clamp-2">
                     {sample.prompt}
-                  </p>
+                  </span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Prompt Area */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-900 uppercase tracking-wider block font-heading">
-              Your Custom Resume Prompt / Background:
-            </label>
+          {/* Prompt Textarea */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-800">Your Bio / Background Prompt</label>
             <textarea
-              rows={4}
+              rows={3}
               value={formData.prompt}
               onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
-              placeholder="Describe your education, past projects, target job role, skills you know, and experience level..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#ff5656] transition-colors leading-relaxed"
+              placeholder="e.g. I am a Computer Science graduate with experience in React and Node.js. Built a fullstack e-commerce project with Redux and MongoDB..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-[#ff5656] focus:bg-white transition-all"
             />
+          </div>
+
+          {/* Profile Photo Upload in Prompt Form */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5 font-heading">
+                <Camera className="w-3.5 h-3.5 text-[#ff5656]" />
+                Profile Photo (Optional)
+              </span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePromptPhotoUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-sm"
+              >
+                <Upload className="w-3.5 h-3.5 text-[#ff5656]" />
+                Upload Photo File
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {formData.photo ? (
+                <img
+                  src={formData.photo}
+                  alt="Profile Preview"
+                  className="w-12 h-12 rounded-full object-cover border-2 border-[#ff5656] shadow-sm"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-slate-400">
+                  <User className="w-6 h-6" />
+                </div>
+              )}
+              <div className="flex items-center gap-2 flex-wrap text-xs">
+                {PRESET_AVATARS.map((av) => (
+                  <button
+                    key={av.id}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, photo: av.url })}
+                    className={`flex items-center gap-1.5 p-1 rounded-xl border transition-all ${
+                      formData.photo === av.url ? 'border-[#ff5656] bg-coral-50' : 'border-slate-200 bg-white'
+                    }`}
+                  >
+                    <img src={av.url} alt={av.label} className="w-6 h-6 rounded-full object-cover" />
+                    <span className="text-[10px] font-semibold text-slate-700 pr-1">{av.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Form Fields Grid */}
@@ -415,17 +578,66 @@ export default function Builder() {
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-bold bg-[#ff5656] text-white hover:bg-[#ff4242] shadow-sm"
               >
                 <Eye className="w-3.5 h-3.5" />
-                Preview in Templates & Download
+                Preview in 8+ Templates & Download
               </button>
             </div>
           </div>
 
-          {/* Section 1: Personal Details */}
+          {/* Section 1: Personal Details & Photo */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
-            <h3 className="text-base font-bold text-slate-900 font-heading flex items-center gap-2">
-              <User className="w-4 h-4 text-[#ff5656]" />
-              Personal & Contact Information
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900 font-heading flex items-center gap-2">
+                <User className="w-4 h-4 text-[#ff5656]" />
+                Personal & Contact Information
+              </h3>
+            </div>
+
+            {/* Photo In Editor */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <input
+                  ref={editFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleEditPhotoUpload}
+                  className="hidden"
+                />
+                {editableResume.candidate?.photo ? (
+                  <img
+                    src={editableResume.candidate.photo}
+                    alt="Candidate Profile"
+                    className="w-12 h-12 rounded-full object-cover border-2 border-[#ff5656] shadow-sm"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold">
+                    <User className="w-6 h-6" />
+                  </div>
+                )}
+                <div>
+                  <h5 className="text-xs font-bold text-slate-900">Profile Photo</h5>
+                  <p className="text-[10px] text-slate-500">Appears on supported resume templates</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => editFileInputRef.current?.click()}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#ff5656] text-white hover:bg-[#ff4242] shadow-sm"
+                >
+                  Change Photo
+                </button>
+                {editableResume.candidate?.photo && (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateCandidate('photo', '')}
+                    className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
               <div className="space-y-1">
@@ -479,7 +691,7 @@ export default function Builder() {
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-slate-700">GitHub / Portfolio</label>
+                <label className="font-bold text-slate-700">GitHub Profile</label>
                 <input
                   type="text"
                   value={editableResume.candidate?.github || ''}
@@ -490,118 +702,132 @@ export default function Builder() {
             </div>
           </div>
 
-          {/* Section 2: Professional Summary */}
+          {/* Section 2: Summary */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-3">
             <h3 className="text-base font-bold text-slate-900 font-heading flex items-center gap-2">
               <FileText className="w-4 h-4 text-[#ff5656]" />
               Professional Summary
             </h3>
             <textarea
-              rows={3}
+              rows={4}
               value={editableResume.summary || ''}
               onChange={(e) => handleUpdateSummary(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs sm:text-sm text-slate-900 leading-relaxed outline-none focus:border-[#ff5656]"
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs sm:text-sm text-slate-900 leading-relaxed focus:border-[#ff5656] outline-none"
             />
           </div>
 
-          {/* Section 3: Technical Skills Management */}
+          {/* Section 3: Technical & Soft Skills */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
             <h3 className="text-base font-bold text-slate-900 font-heading flex items-center gap-2">
               <Layers className="w-4 h-4 text-[#ff5656]" />
-              Technical & Core Skills ({editableResume.skills?.technical?.length || 0})
+              Technical Skills Matrix
             </h3>
 
             <div className="flex flex-wrap gap-2">
-              {editableResume.skills?.technical?.map((skill, sIdx) => (
+              {editableResume.skills?.technical?.map((sk, idx) => (
                 <span
-                  key={sIdx}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-coral-50 text-[#ff5656] border border-coral-200"
+                  key={idx}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200"
                 >
-                  <span>{skill}</span>
+                  {sk}
                   <button
-                    onClick={() => handleRemoveSkill(skill)}
-                    className="hover:text-rose-700 rounded-full p-0.5"
-                    title="Remove Skill"
+                    onClick={() => handleRemoveSkill(sk)}
+                    className="hover:text-rose-600 transition-colors"
                   >
-                    <Trash2 className="w-3 h-3" />
+                    ×
                   </button>
                 </span>
               ))}
             </div>
 
-            {/* Quick Add Skill Input */}
-            <div className="flex items-center gap-2 max-w-sm">
+            <div className="flex gap-2 pt-2">
               <input
                 type="text"
-                id="newSkillInput"
-                placeholder="Add new skill (e.g. GraphQL, AWS)..."
+                id="new-skill-input"
+                placeholder="Add skill (e.g. GraphQL, AWS, Next.js)..."
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleAddSkill(e.currentTarget.value);
                     e.currentTarget.value = '';
                   }
                 }}
-                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:border-[#ff5656] outline-none"
+                className="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:border-[#ff5656] outline-none w-64"
               />
               <button
-                type="button"
                 onClick={() => {
-                  const input = document.getElementById('newSkillInput');
-                  if (input && input.value) {
+                  const input = document.getElementById('new-skill-input');
+                  if (input) {
                     handleAddSkill(input.value);
                     input.value = '';
                   }
                 }}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#ff5656] text-white hover:bg-[#ff4242]"
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800"
               >
-                Add
+                Add Skill
               </button>
             </div>
           </div>
 
           {/* Section 4: Work Experience */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
-            <h3 className="text-base font-bold text-slate-900 font-heading flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-[#ff5656]" />
-              Work & Internship Experience
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900 font-heading flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-[#ff5656]" />
+                Work Experience ({editableResume.experience?.length || 0})
+              </h3>
+              <button
+                onClick={handleAddExperience}
+                className="flex items-center gap-1 text-xs font-bold text-[#ff5656] hover:text-[#ff4242]"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Experience
+              </button>
+            </div>
 
             <div className="space-y-4">
               {editableResume.experience?.map((exp, expIdx) => (
                 <div key={expIdx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-slate-900">Experience #{expIdx + 1}</span>
+                    <button
+                      onClick={() => handleRemoveExperience(expIdx)}
+                      className="text-rose-500 hover:text-rose-700"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <input
                       type="text"
                       value={exp.role || ''}
                       onChange={(e) => handleUpdateExperience(expIdx, 'role', e.target.value)}
-                      placeholder="Role Title"
-                      className="bg-white border border-slate-200 rounded-xl p-2 font-bold text-slate-900"
+                      placeholder="Role (e.g. Software Engineer)"
+                      className="bg-white border border-slate-200 rounded-xl p-2.5 text-slate-900 outline-none"
                     />
                     <input
                       type="text"
                       value={exp.company || ''}
                       onChange={(e) => handleUpdateExperience(expIdx, 'company', e.target.value)}
                       placeholder="Company Name"
-                      className="bg-white border border-slate-200 rounded-xl p-2 text-slate-800"
+                      className="bg-white border border-slate-200 rounded-xl p-2.5 text-slate-900 outline-none"
                     />
                     <input
                       type="text"
                       value={exp.duration || ''}
                       onChange={(e) => handleUpdateExperience(expIdx, 'duration', e.target.value)}
-                      placeholder="Duration (e.g. 2023 - Present)"
-                      className="bg-white border border-slate-200 rounded-xl p-2 text-slate-600"
+                      placeholder="Duration (e.g. 2022 - Present)"
+                      className="bg-white border border-slate-200 rounded-xl p-2.5 text-slate-900 outline-none"
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-slate-700">Responsibilities (One per line)</label>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700 block">Bullet Points (one per line)</label>
                     <textarea
                       rows={3}
                       value={exp.responsibilities?.join('\n') || ''}
-                      onChange={(e) => {
-                        const lines = e.target.value.split('\n');
-                        handleUpdateExperience(expIdx, 'responsibilities', lines);
-                      }}
+                      onChange={(e) => handleUpdateExperience(expIdx, 'responsibilities', e.target.value.split('\n'))}
+                      placeholder="Bullet points..."
                       className="w-full bg-white border border-slate-200 rounded-xl p-3 text-slate-800 leading-relaxed outline-none"
                     />
                   </div>
@@ -612,31 +838,47 @@ export default function Builder() {
 
           {/* Section 5: Projects */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
-            <h3 className="text-base font-bold text-slate-900 font-heading flex items-center gap-2">
-              <FolderGit2 className="w-4 h-4 text-[#ff5656]" />
-              Key Projects
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900 font-heading flex items-center gap-2">
+                <FolderGit2 className="w-4 h-4 text-[#ff5656]" />
+                Projects ({editableResume.projects?.length || 0})
+              </h3>
+              <button
+                onClick={handleAddProject}
+                className="flex items-center gap-1 text-xs font-bold text-[#ff5656] hover:text-[#ff4242]"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Project
+              </button>
+            </div>
 
             <div className="space-y-4">
               {editableResume.projects?.map((proj, projIdx) => (
                 <div key={projIdx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-slate-900">Project #{projIdx + 1}</span>
+                    <button
+                      onClick={() => handleRemoveProject(projIdx)}
+                      className="text-rose-500 hover:text-rose-700"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <input
                       type="text"
                       value={proj.title || ''}
                       onChange={(e) => handleUpdateProject(projIdx, 'title', e.target.value)}
                       placeholder="Project Title"
-                      className="bg-white border border-slate-200 rounded-xl p-2 font-bold text-slate-900"
+                      className="bg-white border border-slate-200 rounded-xl p-2.5 text-slate-900 outline-none"
                     />
                     <input
                       type="text"
                       value={proj.techStack?.join(', ') || ''}
-                      onChange={(e) => {
-                        const stacks = e.target.value.split(',').map((s) => s.trim());
-                        handleUpdateProject(projIdx, 'techStack', stacks);
-                      }}
-                      placeholder="Technologies (React, Node, MongoDB)"
-                      className="bg-white border border-slate-200 rounded-xl p-2 text-slate-700"
+                      onChange={(e) => handleUpdateProject(projIdx, 'techStack', e.target.value.split(',').map(s => s.trim()))}
+                      placeholder="Tech Stack (comma separated)"
+                      className="bg-white border border-slate-200 rounded-xl p-2.5 text-slate-900 outline-none"
                     />
                   </div>
 
@@ -659,7 +901,7 @@ export default function Builder() {
               className="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-bold bg-[#ff5656] hover:bg-[#ff4242] text-white shadow-lg shadow-[#ff5656]/25 transition-all"
             >
               <Eye className="w-4 h-4" />
-              Save & Preview in 5+ Templates
+              Save & Preview in 8+ Templates
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -687,7 +929,13 @@ export default function Builder() {
             </button>
           </div>
 
-          <ResumeTemplateView resumeData={editableResume || currentAnalysis} />
+          <ResumeTemplateView 
+            resumeData={editableResume || currentAnalysis} 
+            onUpdateResume={(updated) => {
+              setEditableResume(updated);
+              setCurrentAnalysis(updated);
+            }}
+          />
         </div>
       )}
     </div>

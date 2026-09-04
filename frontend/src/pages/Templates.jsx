@@ -25,12 +25,15 @@ export default function Templates() {
           Resume Templates & Downloader
         </h1>
         <p className="text-sm sm:text-base text-slate-600 max-w-xl mx-auto leading-relaxed">
-          Transform your parsed resume into professional templates (Kickresume 2-Column, Executive Minimalist, Tech Lead Navy, Editorial Serif, Creative Coral).
+          Transform your resume across 8 high-converting templates (Sidebar, Harvard Classic, Tech Lead Pro, Modernist Gradient, Executive Clean, Editorial, Creative, Compact 1-Page) with custom headshot photo upload and 1-click PDF download.
         </p>
       </div>
 
       {currentAnalysis ? (
-        <ResumeTemplateView resumeData={currentAnalysis} />
+        <ResumeTemplateView 
+          resumeData={currentAnalysis} 
+          onUpdateResume={(updated) => setCurrentAnalysis(updated)}
+        />
       ) : (
         <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-sm space-y-4 max-w-md mx-auto">
           <div className="w-14 h-14 mx-auto rounded-full bg-coral-50 text-[#ff5656] flex items-center justify-center">
