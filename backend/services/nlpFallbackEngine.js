@@ -780,8 +780,8 @@ export const validateResumeText = (text) => {
     }
   }
 
-  // A valid resume must match at least 2 distinct resume indicators
-  if (matchedIndicators < 2) {
+  // A valid resume must match at least 1 distinct resume indicator
+  if (matchedIndicators < 1 && wordCount < 30) {
     return {
       isValid: false,
       error: 'Please upload a valid Resume or CV. The uploaded document does not contain standard resume sections (Education, Skills, Experience, Projects, or Contact information).'

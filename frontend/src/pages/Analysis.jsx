@@ -53,16 +53,52 @@ export default function Analysis() {
         setLoading(true);
         setError(null);
 
-        if (id && id !== 'latest') {
-          const res = await getAnalysisById(id);
-          setData(res);
-          setCurrentAnalysis(res);
-        } else if (currentAnalysis) {
+        // 1. If currentAnalysis in context matches this ID, use it immediately
+        if (currentAnalysis && (currentAnalysis.id === id || !id || id === 'latest')) {
           setData(currentAnalysis);
-        } else {
-          const sample = await loadSample('sample-fullstack');
-          setData(sample);
+          setLoading(false);
+          return;
         }
+
+        // 2. Check localStorage for cached analysis
+        try {
+          const cached = localStorage.getItem('ai_current_analysis');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed && (parsed.id === id || !id || id === 'latest')) {
+              setData(parsed);
+              setCurrentAnalysis(parsed);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (e) {}
+
+        // 3. Try fetching from backend API
+        if (id && id !== 'latest') {
+          try {
+            const res = await getAnalysisById(id);
+            if (res) {
+              setData(res);
+              setCurrentAnalysis(res);
+              setLoading(false);
+              return;
+            }
+          } catch (fetchErr) {
+            console.warn('API fetch failed, using fallback:', fetchErr);
+          }
+        }
+
+        // 4. Fallback to currentAnalysis if available
+        if (currentAnalysis) {
+          setData(currentAnalysis);
+          setLoading(false);
+          return;
+        }
+
+        // 5. Fallback to sample resume
+        const sample = await loadSample('sample-fullstack');
+        setData(sample);
       } catch (err) {
         console.error('Failed to load analysis:', err);
         setError('Could not retrieve analysis. Please upload or choose a sample resume.');

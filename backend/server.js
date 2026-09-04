@@ -29,11 +29,8 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Middleware to ensure DB connection
-app.use(async (req, res, next) => {
-  await connectDB();
-  next();
-});
+// Initialize DB connection in background without blocking requests
+connectDB().catch(() => {});
 
 // API Routes
 app.use('/api', apiRoutes);
